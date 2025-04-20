@@ -92,7 +92,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-
+  
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -133,7 +133,16 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-
+    //if not donation
+    struct thread* t=thread_current();
+    t->recent_cpu=add_int(t->recent_cpu,1);
+    if(kernel_ticks%4==0){
+    int new_prior=PRI_MAX -to_int_round( add_int(divide_int(to_fixed(thread_get_recent_cpu), 4) ,(thread_get_nice() * 2)));
+    thread_set_priority(new_prior);}
+    if(kernel_ticks%100==0){// 1 second 
+    // load_avg = (59/60)*load_avg + (1/60)*list_lenght(&ready_list);
+     t->recent_cpu=add_int(divide_fixed( (multiply_int(to_fixed(thread_get_load_avg()),2),(add_int(multiply_int(to_fixed(thread_get_recent_cpu()),2) , 1)) ), to_fixed(thread_get_recent_cpu)) ,thread_get_nice()) ;
+    }
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
@@ -200,7 +209,8 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
+  
+  
   return tid;
 }
 
@@ -350,6 +360,8 @@ void
 thread_set_nice (int nice UNUSED) 
 {
   /* Not yet implemented. */
+ thread_current()->nice=nice;
+  
 }
 
 /* Returns the current thread's nice value. */
@@ -357,15 +369,17 @@ int
 thread_get_nice (void) 
 {
   /* Not yet implemented. */
-  return 0;
+  struct thread* t=thread_current();
+  return fixed_to_int_nearest(t->nice);
+  
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
-{
-  /* Not yet implemented. */
-  return 0;
+{ 
+ // return fixed_to_int_nearest(load_avg* 100);
+
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -373,9 +387,9 @@ int
 thread_get_recent_cpu (void) 
 {
   /* Not yet implemented. */
-  return 0;
-}
-
+  struct thread* t=thread_current();
+  return fixed_to_int_nearest(t->recent_cpu * 100);
+}
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
@@ -456,14 +470,15 @@ init_thread (struct thread *t, const char *name, int priority)
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
-
+  
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-
+  t->recent_cpu= to_fixed(0);
+  t->nice=0;
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
