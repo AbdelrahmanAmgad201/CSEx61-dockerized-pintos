@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -13,6 +14,11 @@ enum thread_status
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
     THREAD_DYING        /* About to be destroyed. */
   };
+  struct priority_elem {
+   int value;
+   struct list_elem elem;
+ };
+
 
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
@@ -89,7 +95,8 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-
+    struct list eff_priority_list;
+    int effective_priority;
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -132,11 +139,11 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
-
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 bool thread_priority_more(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
-bool semaElement_priority_more(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+bool priority_elem_more(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
 #endif /* threads/thread.h */

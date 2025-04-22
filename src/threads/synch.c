@@ -29,6 +29,7 @@
 #include "threads/synch.h"
 #include <stdio.h>
 #include <string.h>
+
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
@@ -74,7 +75,6 @@ sema_init (struct semaphore *sema, unsigned value)
   sema->value = value;
   list_init (&sema->waiters);
 }
-
 
 /* Down or "P" operation on a semaphore.  Waits for SEMA's value
    to become positive and then atomically decrements it.
@@ -131,7 +131,8 @@ sema_try_down (struct semaphore *sema)
 /* Up or "V" operation on a semaphore.  Increments SEMA's value
    and wakes up one thread of those waiting for SEMA, if any.
 
-   This function may be called from an interrupt handler. */
+   This function may be called from an interrupt handler. 
+*/
 void
 sema_up (struct semaphore *sema) 
 {
@@ -201,9 +202,9 @@ sema_test_helper (void *sema_)
    instead of a lock. */
 void
 lock_init (struct lock *lock)
-{
+{ 
+  
   ASSERT (lock != NULL);
-
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
 }
@@ -219,12 +220,33 @@ lock_init (struct lock *lock)
 void
 lock_acquire (struct lock *lock)
 {
+  
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
+if(lock->holder!= NULL&&!thread_mlfqs){
+  struct lock_elem * le = malloc(sizeof( struct lock_elem));
+  le->myLock= lock;
+
+  int maxWaiter =-1;
+  int max_pri=thread_current()->priority;
+  if (!list_empty(&lock->semaphore.waiters)) {
+    maxWaiter = list_entry(list_front(&lock->semaphore.waiters), struct thread, elem)->priority;
+     if(maxWaiter>max_pri){
+      max_pri=maxWaiter;
+     }
+  }
+  le->priority= max_pri;
+  list_insert_ordered(&lock->holder->eff_priority_list, &le->elem , priority_elem_more, NULL);
+  int highest_donation = list_entry(list_front(& lock->holder->eff_priority_list),struct lock_elem, elem)->priority;
+  lock->holder->effective_priority = highest_donation > lock->holder->effective_priority ? highest_donation :lock->holder->effective_priority;
+  //donatee->priority = donator->priority;
+  // sort ready list 
   
+  
+}
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  lock->holder = thread_current();
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -257,7 +279,27 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+  struct thread * t = thread_current();
+  struct list_elem *e = list_begin(&t->eff_priority_list);
 
+  
+  while (e != list_end(&t->eff_priority_list)) {
+		struct lock_elem *d = list_entry(e, struct lock_elem, elem);
+		
+		if (d->myLock == lock) {
+			list_remove(e);
+			free(d);
+      break;
+		}
+		e = list_next(e);
+	}
+
+  int new_priority =thread_current()->priority;
+  if(!list_empty(&thread_current()->eff_priority_list)) {
+    new_priority = list_entry(list_front(&thread_current()->eff_priority_list), struct priority_elem, elem)->value;
+    new_priority = new_priority >thread_current()->priority ?new_priority:thread_current()->priority;
+  } 
+  thread_current()->effective_priority=new_priority;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
@@ -306,6 +348,8 @@ cond_init (struct condition *cond)
    interrupt handler.  This function may be called with
    interrupts disabled, but interrupts will be turned back on if
    we need to sleep. */
+   
+  
 void
 cond_wait (struct condition *cond, struct lock *lock) 
 {
@@ -321,6 +365,7 @@ cond_wait (struct condition *cond, struct lock *lock)
   lock_release (lock);
   sema_down (&waiter.semaphore);
   lock_acquire (lock);
+
 }
 
 /* If any threads are waiting on COND (protected by LOCK), then
@@ -330,6 +375,7 @@ cond_wait (struct condition *cond, struct lock *lock)
    An interrupt handler cannot acquire a lock, so it does not
    make sense to try to signal a condition variable within an
    interrupt handler. */
+  
 void
 cond_signal (struct condition *cond, struct lock *lock UNUSED) 
 {
@@ -344,7 +390,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
     
   }
 }
-
+   
 /* Wakes up all threads, if any, waiting on COND (protected by
    LOCK).  LOCK must be held before calling this function.
 
