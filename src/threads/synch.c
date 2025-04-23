@@ -141,10 +141,11 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
   
   old_level = intr_disable ();
-  if (!list_empty (&sema->waiters)) 
+  if (!list_empty (&sema->waiters)) {
+    list_sort(&sema->waiters,thread_priority_more,NULL);
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
-              
+                                struct thread, elem));   
+  }      
   intr_set_level (old_level);
 }
 
@@ -224,29 +225,46 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
-if(lock->holder!= NULL&&!thread_mlfqs){
-  struct lock_elem * le = malloc(sizeof( struct lock_elem));
-  le->myLock= lock;
-
-  int maxWaiter =-1;
-  int max_pri=thread_current()->priority;
-  if (!list_empty(&lock->semaphore.waiters)) {
-    maxWaiter = list_entry(list_front(&lock->semaphore.waiters), struct thread, elem)->priority;
-     if(maxWaiter>max_pri){
-      max_pri=maxWaiter;
-     }
+  
+  if(lock->holder!= NULL&&!thread_mlfqs){
+    struct lock_elem *le = malloc(sizeof( struct lock_elem));
+    le->myLock= lock;
+    
+    int maxWaiter = -1  ;
+  
+    int  max_pri= thread_current()->priority;
+     if (!list_empty(&lock->semaphore.waiters)) {
+       maxWaiter = list_entry(list_front(&lock->semaphore.waiters), struct thread, elem)->effective_priority;
+       if(maxWaiter>max_pri){
+        max_pri=maxWaiter;
+      }
+    }
+    le->priority= max_pri;
+    list_insert_ordered(&lock->holder->eff_priority_list, &le->elem , priority_elem_more, NULL);
+  
+    donation(thread_current(),lock);
+    
   }
-  le->priority= max_pri;
-  list_insert_ordered(&lock->holder->eff_priority_list, &le->elem , priority_elem_more, NULL);
-  int highest_donation = list_entry(list_front(& lock->holder->eff_priority_list),struct lock_elem, elem)->priority;
-  lock->holder->effective_priority = highest_donation > lock->holder->effective_priority ? highest_donation :lock->holder->effective_priority;
-  //donatee->priority = donator->priority;
-  // sort ready list 
+
   
-  
-}
   sema_down (&lock->semaphore);
+  
+  
   lock->holder = thread_current();
+}
+void 
+donation (struct thread *donator , struct lock * lock){
+  int first = list_entry(list_front(& lock->holder->eff_priority_list),struct lock_elem, elem)->priority;
+  int highest_donation = donator->effective_priority>first ?donator->effective_priority :first;
+  donator->waitting = lock ;
+  if (donator->effective_priority >= lock->holder->effective_priority){
+  
+    lock->holder->effective_priority = highest_donation > lock->holder->effective_priority ? highest_donation :lock->holder->effective_priority;
+    list_entry(list_front(& lock->holder->eff_priority_list),struct lock_elem, elem)->priority = lock->holder->effective_priority;
+    if (lock->holder->waitting != NULL){
+      aga(lock->holder,lock->holder->waitting);
+    }
+  }
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -281,26 +299,31 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   struct thread * t = thread_current();
   struct list_elem *e = list_begin(&t->eff_priority_list);
-
+  
   
   while (e != list_end(&t->eff_priority_list)) {
 		struct lock_elem *d = list_entry(e, struct lock_elem, elem);
 		
 		if (d->myLock == lock) {
-			list_remove(e);
-			free(d);
-      break;
-		}
-		e = list_next(e);
+      
+			list_remove(e);	
+
+    }		
+    e = list_next(e);
 	}
 
-  int new_priority =thread_current()->priority;
-  if(!list_empty(&thread_current()->eff_priority_list)) {
-    new_priority = list_entry(list_front(&thread_current()->eff_priority_list), struct priority_elem, elem)->value;
-    new_priority = new_priority >thread_current()->priority ?new_priority:thread_current()->priority;
+  
+  int new_priority =lock->holder->priority;
+  
+  if(!list_empty(&lock->holder->eff_priority_list)) {
+    new_priority = list_entry(list_front(&lock->holder->eff_priority_list), struct lock_elem, elem)->priority;
+    
+    
+    new_priority = new_priority >lock->holder->priority ?new_priority:lock->holder->priority;
   } 
   thread_current()->effective_priority=new_priority;
   lock->holder = NULL;
+  
   sema_up (&lock->semaphore);
 }
 

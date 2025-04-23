@@ -93,6 +93,10 @@ bool priority_elem_more(const struct list_elem *a, const struct list_elem *b, vo
     struct lock_elem *pb = list_entry(b, struct lock_elem, elem);
     return pa->priority > pb->priority;
 }
+void sort_ready_list(){
+  
+  list_sort(&ready_list,thread_priority_more,NULL);
+}
 
 
 
@@ -248,6 +252,9 @@ void
 thread_unblock (struct thread *t) 
 {
   enum intr_level old_level;
+  if(!is_thread (t)){
+    return;
+  }
   ASSERT (is_thread (t));
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
@@ -384,7 +391,6 @@ void thread_set_priority(int new_priority)
 int
 thread_get_priority (void)
 {
-  printf("donated priority = %d\n", thread_current()->effective_priority);
   return thread_current ()->effective_priority;
 }
  
@@ -508,6 +514,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->effective_priority = priority;
+  t->waitting = NULL;
   list_init(&t->eff_priority_list);
   t->magic = THREAD_MAGIC;
   old_level = intr_disable ();

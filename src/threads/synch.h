@@ -32,7 +32,7 @@ bool lock_held_by_current_thread (const struct lock *);
 struct lock_elem
 {
   struct lock * myLock;
-  int priority;
+  int  priority;
   struct list_elem elem;
 };
 /* Condition variable. */

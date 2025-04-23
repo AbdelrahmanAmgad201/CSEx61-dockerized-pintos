@@ -98,7 +98,9 @@ struct thread
     struct list eff_priority_list;
     int effective_priority;
     /* Shared between thread.c and synch.c. */
-    struct list_elem elem;              /* List element. */
+    struct list_elem elem;              /* List element. */\
+    struct lock  * waitting ;
+    
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -145,5 +147,5 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 bool thread_priority_more(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 bool priority_elem_more(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
-
+void sort_ready_list();
 #endif /* threads/thread.h */
