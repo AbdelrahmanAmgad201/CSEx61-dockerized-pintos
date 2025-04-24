@@ -1,0 +1,10 @@
+# MLFQS
+# pintos -q -mlfqs run mlfqs-load-1            passed
+# pintos -q -mlfqs run mlfqs-load-60           passed
+# pintos -q -mlfqs run mlfqs-load-avg          passed
+# pintos -q -mlfqs run mlfqs-recent-1          passed
+# pintos -q -mlfqs run mlfqs-fair-2            passed
+# pintos -q -mlfqs run mlfqs-fair-20           passed
+# pintos -q -mlfqs run mlfqs-nice-2            passed
+# pintos -q -mlfqs run mlfqs-nice-10           passed
+# pintos -q -mlfqs run mlfqs-block             passed

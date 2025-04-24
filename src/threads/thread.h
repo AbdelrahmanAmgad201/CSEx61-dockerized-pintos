@@ -5,7 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include <stdlib.h>
-
+#include "fixed-point.h"
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -28,7 +28,18 @@ typedef int tid_t;
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
-#define PRI_MAX 63                      /* Highest priority. */
+#define PRI_MAX 63                      /* Highest priority. *//* Priority donation */
+int thread_get_priority(void);
+void thread_set_priority(int);
+const char *thread_name(void);
+
+/* MLFQS */
+void thread_set_nice(int nice);
+int thread_get_nice(void);
+int thread_get_recent_cpu(void);
+int thread_get_load_avg(void);
+
+extern bool thread_mlfqs;  // global variable
 
 /* A kernel thread or user process.
 
@@ -97,6 +108,8 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
     struct list eff_priority_list;
     int effective_priority;
+    int nice;                     /* Niceness value */
+    fixed_t recent_cpu; 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */\
     struct lock  * waitting ;
@@ -115,10 +128,10 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
-
+extern struct thread *idle_thread;
 void thread_init (void);
 void thread_start (void);
-
+struct thread *thread_get_idle(void);
 void thread_tick (void);
 void thread_print_stats (void);
 

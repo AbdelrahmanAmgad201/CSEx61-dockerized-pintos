@@ -262,7 +262,7 @@ donation (struct thread *donator , struct lock * lock){
     lock->holder->effective_priority = highest_donation > lock->holder->effective_priority ? highest_donation :lock->holder->effective_priority;
     list_entry(list_front(& lock->holder->eff_priority_list),struct lock_elem, elem)->priority = lock->holder->effective_priority;
     if (lock->holder->waitting != NULL){
-      aga(lock->holder,lock->holder->waitting);
+      donation(lock->holder,lock->holder->waitting);
     }
   }
 }
