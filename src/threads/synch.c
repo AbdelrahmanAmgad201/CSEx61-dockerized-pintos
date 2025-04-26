@@ -297,33 +297,38 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-  struct thread * t = thread_current();
-  struct list_elem *e = list_begin(&t->eff_priority_list);
-  
-  
-  while (e != list_end(&t->eff_priority_list)) {
-		struct lock_elem *d = list_entry(e, struct lock_elem, elem);
-		
-		if (d->myLock == lock) {
+
+  if(!thread_mlfqs){
+    
+    struct thread * t = thread_current();
+    struct list_elem *e = list_begin(&t->eff_priority_list);
+    
+    
+    while (e != list_end(&t->eff_priority_list)) {
+      struct lock_elem *d = list_entry(e, struct lock_elem, elem);
       
-			list_remove(e);	
+      if (d->myLock == lock) {
+        
+        list_remove(e);	
 
-    }		
-    e = list_next(e);
-	}
+      }		
+      e = list_next(e);
+    }
 
-  
-  int new_priority =lock->holder->priority;
-  
-  if(!list_empty(&lock->holder->eff_priority_list)) {
-    new_priority = list_entry(list_front(&lock->holder->eff_priority_list), struct lock_elem, elem)->priority;
     
+    int new_priority =lock->holder->priority;
     
-    new_priority = new_priority >lock->holder->priority ?new_priority:lock->holder->priority;
-  } 
-  thread_current()->effective_priority=new_priority;
+    if(!list_empty(&lock->holder->eff_priority_list)) {
+      new_priority = list_entry(list_front(&lock->holder->eff_priority_list), struct lock_elem, elem)->priority;
+      
+      
+      new_priority = new_priority >lock->holder->priority ?new_priority:lock->holder->priority;
+    } 
+    thread_current()->effective_priority=new_priority;
+    
+  }
+
   lock->holder = NULL;
-  
   sema_up (&lock->semaphore);
 }
 
