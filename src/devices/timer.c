@@ -31,11 +31,16 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
+static struct sleeping_thread *sleep_threads_head;
+static struct semaphore sleeping_threads_lock;
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
 timer_init (void) 
 {
+  sleep_threads_head = NULL;
+  sema_init(&sleeping_threads_lock, 1);
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
@@ -86,15 +91,42 @@ timer_elapsed (int64_t then)
 }
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
-   be turned on. */
+be turned on. */
 void
-timer_sleep (int64_t ticks) 
+timer_sleep(int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
+    if (ticks <= 0) 
+        return;
+        
+    ASSERT(intr_get_level() == INTR_ON);
 
-  ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+    struct sleeping_thread sleep_node;
+    struct semaphore sleep_sema;
+    sema_init(&sleep_sema, 0);
+
+    sleep_node.sema_sleep = &sleep_sema;
+    sleep_node.wakeup_tick = timer_ticks() + ticks;
+    sleep_node.next = NULL;
+
+    sema_down(&sleeping_threads_lock);
+
+    if (sleep_threads_head == NULL || sleep_threads_head->wakeup_tick >= sleep_node.wakeup_tick) 
+    {
+        sleep_node.next = sleep_threads_head;
+        sleep_threads_head = &sleep_node;
+    } 
+    else 
+    {
+        struct sleeping_thread *curr = sleep_threads_head;
+        while (curr->next != NULL && curr->next->wakeup_tick <= sleep_node.wakeup_tick)
+            curr = curr->next;
+        sleep_node.next = curr->next;
+        curr->next = &sleep_node;
+    }
+
+    sema_up(&sleeping_threads_lock);
+
+    sema_down(&sleep_sema);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -173,8 +205,21 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick();
+
+  while (sleep_threads_head != NULL) 
+  {
+      if (sleep_threads_head->wakeup_tick <= ticks) 
+      {
+          sema_up(sleep_threads_head->sema_sleep);
+          sleep_threads_head = sleep_threads_head->next;
+      } 
+      else 
+      {
+          break;
+      }
+  }
+
   if (thread_mlfqs) {
-    
     struct thread *curr = thread_current();
     if (curr != idle_thread)
       curr->recent_cpu = add_int(curr->recent_cpu, 1);
@@ -191,7 +236,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
       intr_yield_on_return();
     }
   }
-
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
