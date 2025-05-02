@@ -3,6 +3,7 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -12,20 +13,20 @@ syscall_init (void)
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
-void 
-validate_pointer(void *ptr){
-  return;
+void validate_pointer(const void *ptr) {
+  if (ptr == NULL || !is_user_vaddr(ptr) || pagedir_get_page(thread_current()->pagedir, ptr) == NULL) {
+    thread_exit();
+  }
 }
 
-void load_arg(int *arg, struct intr_frame *f UNUSED, int arg_number){
-  /* we still need to check for validity of the args and transform to physical address*/
-  for(int i = 0; i < arg_number; i++){
-    int * curr_arg = f->esp + i + 1;
+void load_arg(int *arg, struct intr_frame *f, int arg_number) {
+  for (int i = 0; i < arg_number; i++) {
+    int *curr_arg = (int *)((char *)f->esp + (i + 1) * sizeof(int));
     validate_pointer(curr_arg);
     arg[i] = *curr_arg;
   }
-
 }
+
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
