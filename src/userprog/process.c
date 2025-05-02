@@ -125,8 +125,6 @@ process_exit (void)
 		pagedir_activate (NULL);
 		pagedir_destroy (pd);
 	}
-  /* Free the current process's resources. */
-  /* print exit mssgs/
 }
 
 /* Sets up the CPU for running user code in the current

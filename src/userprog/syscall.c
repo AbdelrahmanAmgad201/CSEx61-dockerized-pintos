@@ -59,6 +59,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_SEEK:
     case SYS_TELL:
     case SYS_CLOSE:
+    default:
   }
 
 
