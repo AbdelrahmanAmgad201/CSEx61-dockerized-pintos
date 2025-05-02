@@ -45,6 +45,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   */
   switch (syscall_number){
     case SYS_HALT:
+      shutdown_power_off();
+      break;
     case SYS_EXIT:
     case SYS_EXEC:
     case SYS_WAIT:
