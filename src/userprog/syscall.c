@@ -17,8 +17,6 @@ validate_pointer(void *ptr){
   return;
 }
 
-
-
 void load_arg(int *arg, struct intr_frame *f UNUSED, int arg_number){
   /* we still need to check for validity of the args and transform to physical address*/
   for(int i = 0; i < arg_number; i++){
@@ -34,7 +32,10 @@ syscall_handler (struct intr_frame *f UNUSED)
   printf ("system call!\n");
   int syscall_number = *(int *) f->esp;
   int arg[3];
+  
+  /* can vary from 1 - 3*/
   int arg_number = 0;
+
   /* For each system call load the needed args then implement the functionality
     eg:
     arg_number = 1;
