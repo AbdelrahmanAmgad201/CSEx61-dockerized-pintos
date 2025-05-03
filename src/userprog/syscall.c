@@ -49,6 +49,10 @@ void seek (int fd, unsigned position){
   file_seek(file,position);
 }
 
+void exit(int status) {
+  printf("%s: exit(%d)\n", thread_current()->name, status);
+  process_exit();
+}
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
@@ -70,6 +74,10 @@ syscall_handler (struct intr_frame *f UNUSED)
       shutdown_power_off();
       break;
     case SYS_EXIT:
+      arg_number = 1;
+      load_arg(arg, f , arg_number);
+      exit(arg[0]);
+      break;
     case SYS_EXEC:
     case SYS_WAIT:
     case SYS_CREATE:
