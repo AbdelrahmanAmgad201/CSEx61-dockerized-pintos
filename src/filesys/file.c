@@ -2,11 +2,14 @@
 #include <debug.h>
 #include "filesys/inode.h"
 #include "threads/malloc.h"
+#include "threads/synch.h"
 
 /* An open file. */
 struct file 
   {
     struct inode *inode;        /* File's inode. */
+    struct lock *lock ;
+    
     off_t pos;                  /* Current position. */
     bool deny_write;            /* Has file_deny_write() been called? */
   };
@@ -18,11 +21,13 @@ struct file *
 file_open (struct inode *inode) 
 {
   struct file *file = calloc (1, sizeof *file);
+  file->lock = calloc (1, sizeof *file->lock);
   if (inode != NULL && file != NULL)
     {
       file->inode = inode;
       file->pos = 0;
       file->deny_write = false;
+      lock_init(file->lock);
       return file;
     }
   else
@@ -155,7 +160,9 @@ file_seek (struct file *file, off_t new_pos)
 {
   ASSERT (file != NULL);
   ASSERT (new_pos >= 0);
+  lock_acquire(file->lock);
   file->pos = new_pos;
+  lock_release(file->lock);
 }
 
 /* Returns the current position in FILE as a byte offset from the
@@ -164,5 +171,7 @@ off_t
 file_tell (struct file *file) 
 {
   ASSERT (file != NULL);
+  lock_acquire(file->lock);
   return file->pos;
+  lock_release(file->lock);
 }

@@ -13,6 +13,11 @@ enum thread_status
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
     THREAD_DYING        /* About to be destroyed. */
   };
+struct file_elem {
+   int fd;
+   struct file *file;
+   struct list_elem elem;
+ };
 
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
@@ -89,7 +94,7 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-
+    struct list file_list; 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
