@@ -125,6 +125,14 @@ process_exit (void)
 		pagedir_activate (NULL);
 		pagedir_destroy (pd);
 	}
+	/* Close all open files */
+	struct list_elem *e;
+	for (e = list_begin(&cur->file_list); e != list_end(&cur->file_list); e = list_next(e)) {
+		struct file_elem *fdesc = list_entry(e, struct file_elem, elem);
+		file_close(fdesc->file);
+		list_remove(e);
+		free(fdesc);
+	}
 }
 
 /* Sets up the CPU for running user code in the current
