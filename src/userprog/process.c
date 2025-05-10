@@ -124,6 +124,7 @@ process_exit (void)
 		cur->pagedir = NULL;
 		pagedir_activate (NULL);
 		pagedir_destroy (pd);
+		
 	}
 	/* Close all open files */
 	struct list_elem *e;

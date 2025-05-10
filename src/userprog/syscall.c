@@ -63,7 +63,7 @@ int read (int fd, void *buffer, unsigned size)
 }
 unsigned tell (int fd){
   struct file *file = get_file_by_fd(fd);
-  if (file == NULL) return -1;
+  // if (file == NULL) return -1;
   return file_tell(file);
 }
 void seek (int fd, unsigned position){
@@ -130,9 +130,21 @@ int
  void 
  close(int fd){
     struct file* file=get_file_by_fd(fd);
-        lock_acquire(&filesys_lock);
-        file_close(file);
-        lock_release(&filesys_lock);
+    lock_acquire(&filesys_lock);
+    
+	  struct thread *cur = thread_current();
+    struct list_elem *e;
+    struct file_elem *fdesc;
+
+     for (e = list_begin(&cur->file_list); e != list_end(&cur->file_list); e = list_next(e)) {
+        fdesc = list_entry(e, struct file_elem, elem);
+        if (fdesc->fd == fd) {
+          file_close(fdesc->file);
+          list_remove(e);
+        }
+      }
+    free(fdesc);
+    lock_release(&filesys_lock);
    
  }
 void exit(int status) {
@@ -211,14 +223,15 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_TELL:
       arg_number = 1;
       load_arg(arg, f , arg_number);
-      int position = tell((int)arg[0]);
-      if (position == -1) return;
+      unsigned position = tell((int)arg[0]);
+      
       f->eax = position;
       break;
     case SYS_CLOSE:
       arg_number = 1;
       load_arg(arg, f , arg_number);
       close((int)arg[0]); 
+      break;
     default:
       break;
   }
