@@ -78,9 +78,9 @@ int size_file(int fd){
 }
 int open(char* file_name){
   if (file_name == NULL)return -1;
-  lock_acquire(&filesys_lock);
+  lock_acquire(&filesys_lock); ///
   struct file *file = filesys_open(file_name);
-  lock_release(&filesys_lock);
+  lock_release(&filesys_lock); ///
   if (file == NULL) return -1 ;
   struct thread * cur = thread_current();
     
@@ -95,19 +95,18 @@ int open(char* file_name){
 bool 
 remove (const char *file){
     if (file == NULL)return -1;
-       lock_acquire(&filesys_lock);
+       lock_acquire(&filesys_lock);//
        bool removed = filesys_remove(file);
-       lock_release(&filesys_lock);
+       lock_release(&filesys_lock);//
     return removed;
 }
 bool
 create (const char *file, unsigned initial_size){
   if (file == NULL ) return -1;
-        lock_acquire(&filesys_lock);
-         bool created =filesys_create(file,initial_size);
-        lock_release(&filesys_lock);
+    lock_acquire(&filesys_lock);//
+    bool created =filesys_create(file,initial_size);
+    lock_release(&filesys_lock);//
   return created;
-  
 }
 int
  write (int fd, const void *buffer, unsigned size){
@@ -182,7 +181,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_CREATE:
           arg_number = 2;
           load_arg(arg, f ,arg_number);
-          return create((char*)arg[0],(unsigned)arg[1]);
+          f->eax = create((char*)arg[0],(unsigned)arg[1]);
           break;
     case SYS_REMOVE: 
           arg_number =1;
