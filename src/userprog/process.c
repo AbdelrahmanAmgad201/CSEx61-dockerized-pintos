@@ -108,10 +108,17 @@ process_exit (void)
 {
 	struct thread *cur = thread_current ();
 	uint32_t *pd;
+	if (cur->executable != NULL) {
+        if (cur->executable->deny_write)
+        file_allow_write(cur->executable);
 
+        file_close(cur->executable);
+        cur->executable = NULL;
+    }
 	/* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
 	pd = cur->pagedir;
+
 	if (pd != NULL)
 	{
 		/* Correct ordering here is crucial.  We must set
@@ -134,6 +141,7 @@ process_exit (void)
 		list_remove(e);
 		free(fdesc);
 	}
+
 }
 
 /* Sets up the CPU for running user code in the current
@@ -250,7 +258,7 @@ load (const char *file_name, void (**eip) (void), void **esp, char **save_ptr)
 		goto done;
 	}
 	file_deny_write(file);
-
+	thread_current()->executable = file;
 	/* Read and verify executable header. */
 	if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
 			|| memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
@@ -334,7 +342,11 @@ load (const char *file_name, void (**eip) (void), void **esp, char **save_ptr)
 
 	done:
 	/* We arrive here whether the load is successful or not. */
-	file_close (file);
+	if (!success && file != NULL) 
+  	{
+    	file_close(file);
+    	thread_current()->executable = NULL;
+  	}
 	return success;
 }
 
