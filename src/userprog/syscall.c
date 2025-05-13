@@ -45,6 +45,7 @@ struct file *get_file_by_fd(int fd) {
   }
   return NULL;
 }
+
 int read (int fd, void *buffer, unsigned size)
 { 
   if(fd==0){
@@ -61,21 +62,25 @@ int read (int fd, void *buffer, unsigned size)
   }
   return file_read(fd,buffer,size);
 }
+
 unsigned tell (int fd){
   struct file *file = get_file_by_fd(fd);
   // if (file == NULL) return -1;
   return file_tell(file);
 }
+
 void seek (int fd, unsigned position){
   struct file *file = get_file_by_fd(fd);
   if (file == NULL )return; 
   file_seek(file,position);
 }
+
 int size_file(int fd){
   struct file *file = get_file_by_fd(fd);
   if (file == NULL )return -1 ; 
   return file_length(file);
 }
+
 int open(char* file_name){
   if (file_name == NULL)return -1;
   lock_acquire(&filesys_lock);
@@ -92,6 +97,7 @@ int open(char* file_name){
   
   return new_file_elem->fd;
 }
+
 bool 
 remove (const char *file){
     if (file == NULL)return -1;
@@ -100,6 +106,7 @@ remove (const char *file){
        lock_release(&filesys_lock);
     return removed;
 }
+
 bool
 create (const char *file, unsigned initial_size){
   if (file == NULL ) return -1;
@@ -109,6 +116,7 @@ create (const char *file, unsigned initial_size){
   return created;
   
 }
+
 int
  write (int fd, const void *buffer, unsigned size){
     if(buffer==NULL || size ==0) return -1;
@@ -127,6 +135,7 @@ int
     return file_write(file,buffer,size);
     
  }
+
  void 
  close(int fd){
     struct file* file=get_file_by_fd(fd);
@@ -147,10 +156,12 @@ int
     lock_release(&filesys_lock);
    
  }
+
 void exit(int status) {
   printf("%s: exit(%d)\n", thread_current()->name, status);
   process_exit();
 }
+
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
