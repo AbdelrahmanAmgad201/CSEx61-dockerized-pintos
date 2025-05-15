@@ -158,7 +158,10 @@ int
 
 void exit(int status) {
   printf("%s: exit(%d)\n", thread_current()->name, status);
-  process_exit();
+  struct thread *t = thread_current();
+  if (t->my_child_info != NULL)
+    t->my_child_info->child_exit_status = status;
+  thread_exit();
 }
 
 static void
@@ -181,55 +184,73 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_HALT:
       shutdown_power_off();
       break;
+
     case SYS_EXIT:
       arg_number = 1;
       load_arg(arg, f , arg_number);
       exit(arg[0]);
       break;
+
     case SYS_EXEC:
+      load_arg(arg, f, 1);
+      if (arg[0] == NULL)
+        exit(-1);
+      f->eax = process_execute(arg[0]);
+      break;
+
     case SYS_WAIT:
-    ///////////////////////////
+      load_arg(arg, f, 1);
+      f->eax = process_wait((tid_t)arg[0]);
+      break;
+    
     case SYS_CREATE:
-          arg_number = 2;
-          load_arg(arg, f ,arg_number);
-          f->eax = create((char*)arg[0],(unsigned)arg[1]);
-          break;
+      arg_number = 2;
+      load_arg(arg, f ,arg_number);
+      f->eax = create((char*)arg[0],(unsigned)arg[1]);
+      break;
+
     case SYS_REMOVE: 
-          arg_number =1;
-          load_arg(arg, f ,arg_number);
-          f->eax = remove((char*)arg[0]);
-          break;
+      arg_number = 1;
+      load_arg(arg, f ,arg_number);
+      f->eax = remove((char*)arg[0]);
+      break;
+
     case SYS_OPEN:
-        arg_number = 1 ;
-        load_arg(arg, f ,arg_number);
-        f->eax= open((char*)arg[0]);
-        break;
+      arg_number = 1 ;
+      load_arg(arg, f ,arg_number);
+      f->eax= open((char*)arg[0]);
+      break;
+
     case SYS_FILESIZE:
-          arg_number = 1 ;
-          load_arg(arg, f ,arg_number);
-          int size = size_file((int)arg[0]);
-          if(size == -1)return;
-          f->eax = size;
-          break;
+      arg_number = 1 ;
+      load_arg(arg, f ,arg_number);
+      int size = size_file((int)arg[0]);
+      if(size == -1)return;
+      f->eax = size;
+      break;
+
     case SYS_READ:
-        arg_number = 3 ;
-          load_arg(arg, f ,arg_number);
-          int file_bytes_read=read((int)arg[0],arg[1],(unsigned)arg[2]);
-          if(file_bytes_read<=0)
-             return
-          f->eax=file_bytes_read;
-          break;
+      arg_number = 3 ;
+      load_arg(arg, f ,arg_number);
+      int file_bytes_read=read((int)arg[0],arg[1],(unsigned)arg[2]);
+      if(file_bytes_read<=0)
+          return
+      f->eax=file_bytes_read;
+      break;
+
     case SYS_WRITE:
-        arg_number = 3 ;
-          load_arg(arg, f ,arg_number);
-          int file_bytes=write((int)arg[0],arg[1],(unsigned)arg[2]);
-          f->eax = file_bytes;
-          break;
+      arg_number = 3 ;
+      load_arg(arg, f ,arg_number);
+      int file_bytes=write((int)arg[0],arg[1],(unsigned)arg[2]);
+      f->eax = file_bytes;
+      break;
+
     case SYS_SEEK:
       arg_number = 2;
       load_arg(arg, f , arg_number);
       seek((int)arg[0],(unsigned)arg[1]);
       break;
+
     case SYS_TELL:
       arg_number = 1;
       load_arg(arg, f , arg_number);
@@ -237,14 +258,16 @@ syscall_handler (struct intr_frame *f UNUSED)
       
       f->eax = position;
       break;
+
     case SYS_CLOSE:
       arg_number = 1;
       load_arg(arg, f , arg_number);
       close((int)arg[0]); 
       break;
+
     default:
       break;
   }
-  thread_exit ();
+  // thread_exit ();
 }
 

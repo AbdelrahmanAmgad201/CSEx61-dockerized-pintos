@@ -4,6 +4,8 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+
+#include "threads/synch.h"
 #include "userprog/syscall.h"
 
 /* States in a thread's life cycle. */
@@ -95,20 +97,41 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+    
+    /* File descriptor and executable */
     struct list file_list; 
     struct file * executable;
     int next_fd;
+    
+    /* Process hierarchy */
+    struct thread *parent_thread;       /* Parent thread pointer */
+    struct list child_processes;        /* List of `child_info` structs */
+    
+    struct child_info *my_child_info;   /* Pointer to my own `child_info` in parent */
+    
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-
+    
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 #endif
-
+    
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+struct child_info 
+  {
+    tid_t tid;                      // Child thread ID
+    int child_exit_status;          // Exit code of the child
+    bool child_loaded;              // Whether child started successfully or not
+    bool child_exited;              // Whether child has exited
+    bool parent_exited;             // Whether parent has waited on this child
+    struct semaphore wait_sema;     // For parent to wait on child
+    struct list_elem elem;          // List element for parent’s child_processes list
+  };
+  
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.

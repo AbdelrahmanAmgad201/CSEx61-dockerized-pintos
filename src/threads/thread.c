@@ -166,12 +166,15 @@ tid_t
 thread_create (const char *name, int priority,
 		thread_func *function, void *aux)
 {
+	printf("in thread create\n");
+
 	struct thread *t;
 	struct kernel_thread_frame *kf;
 	struct switch_entry_frame *ef;
 	struct switch_threads_frame *sf;
 	tid_t tid;
 	enum intr_level old_level;
+	struct child_info *child_info_ptr;
 
 	ASSERT (function != NULL);
 
@@ -183,6 +186,33 @@ thread_create (const char *name, int priority,
 	/* Initialize thread. */
 	init_thread (t, name, priority);
 	tid = t->tid = allocate_tid ();
+
+	/* Set up parent-child relationship if we're not the initial thread */
+	if (thread_current() != initial_thread) {
+		/* Set the parent thread */
+		t->parent_thread = thread_current();
+
+		/* Create and initialize child_info struct */
+		child_info_ptr = malloc(sizeof(struct child_info));
+		if (child_info_ptr == NULL) {
+			palloc_free_page(t);
+			return TID_ERROR;
+		}
+
+		/* Initialize the child info */
+		child_info_ptr->tid = tid;
+		child_info_ptr->child_exited = false;
+		child_info_ptr->parent_exited = false;
+		child_info_ptr->child_loaded = false;
+		child_info_ptr->child_exit_status = -1;
+		sema_init(&child_info_ptr->wait_sema, 0);
+
+		/* Connect child to its child_info record */
+		t->my_child_info = child_info_ptr;
+
+		/* Add child_info to parent's child list */
+		list_push_back(&thread_current()->child_processes, &child_info_ptr->elem);
+	}
 
 	/* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
@@ -471,9 +501,17 @@ init_thread (struct thread *t, const char *name, int priority)
 	t->stack = (uint8_t *) t + PGSIZE;
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+
+	/* Initialize file-related fields */
 	list_init(&t->file_list);
-	t->next_fd = 2 ;
+	t->next_fd = 2;
 	t->executable = NULL;
+
+	/* Initialize process hierarchy fields */
+	t->parent_thread = NULL;
+	list_init(&t->child_processes);
+	t->my_child_info = NULL;
+
 	old_level = intr_disable ();
 	list_push_back (&all_list, &t->allelem);
 	intr_set_level (old_level);
