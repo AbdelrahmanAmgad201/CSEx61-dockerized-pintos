@@ -32,7 +32,7 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp, char** s
 tid_t
 process_execute (const char *file_name) 
 {
-	printf("in process_excute\n");
+	// printf("in process_excute\n");
 
     char *fn_copy;
     tid_t tid;
@@ -95,7 +95,7 @@ process_execute (const char *file_name)
 static void
 start_process (void *file_name_)
 {
-	printf("inside start process\n");
+	// printf("inside start process\n");
 
     char *file_name = file_name_;
     struct intr_frame if_;
@@ -115,8 +115,7 @@ start_process (void *file_name_)
 
     /* If load failed, notify parent and quit */
     if (!success) {
-		printf("process started successfully\n");
-
+		
         if (curr->parent_thread != NULL && curr->my_child_info != NULL) {
             /* Signal parent that load is complete */
             sema_up(&curr->my_child_info->wait_sema);
@@ -126,7 +125,9 @@ start_process (void *file_name_)
         
         palloc_free_page (file_name);
         thread_exit ();
-    }		
+    }	
+	
+	// printf("process started successfully\n");
 
     /* Signal parent that load was successful */
     if (curr->parent_thread != NULL && curr->my_child_info != NULL) {
@@ -178,12 +179,15 @@ process_wait (tid_t child_tid)
     }
     
     /* If child not found or we've already waited on this child, return -1 */
-    if (e == list_end(&cur->child_processes) || child_info_ptr->parent_exited)
+    if (e == list_end(&cur->child_processes))
         return -1;
     
+	
+	sema_down(&child_info_ptr->wait_sema);
     /* If child hasn't exited yet, wait for it */
-    if (!child_info_ptr->child_exited)
-        sema_down(&child_info_ptr->wait_sema);
+    if (!child_info_ptr->child_exited) {
+		// printf("waiting\n");
+	}
     
     /* At this point, child has exited, retrieve exit status */
     exit_status = child_info_ptr->child_exit_status;
@@ -217,6 +221,12 @@ process_exit (void)
         file_close(cur->executable);
         cur->executable = NULL;
     }
+
+	/* Release all locks */
+	while (!list_empty(&cur->locks_list)) {
+		struct lock *lock = list_entry(list_pop_front(&cur->locks_list), struct lock, elem);
+		lock_release(lock);
+	}
 
     /* Clean up child processes */
     while (!list_empty(&cur->child_processes)) {

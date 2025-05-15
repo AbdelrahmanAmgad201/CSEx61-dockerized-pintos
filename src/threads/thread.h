@@ -102,6 +102,9 @@ struct thread
     struct list file_list; 
     struct file * executable;
     int next_fd;
+
+    /* Held locks by thread */
+    struct list locks_list;
     
     /* Process hierarchy */
     struct thread *parent_thread;       /* Parent thread pointer */

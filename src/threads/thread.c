@@ -13,6 +13,7 @@
 #include "threads/vaddr.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include <stdlib.h>
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -166,7 +167,6 @@ tid_t
 thread_create (const char *name, int priority,
 		thread_func *function, void *aux)
 {
-	printf("in thread create\n");
 
 	struct thread *t;
 	struct kernel_thread_frame *kf;
@@ -188,12 +188,12 @@ thread_create (const char *name, int priority,
 	tid = t->tid = allocate_tid ();
 
 	/* Set up parent-child relationship if we're not the initial thread */
-	if (thread_current() != initial_thread) {
+	// if (thread_current() != initial_thread) {
 		/* Set the parent thread */
 		t->parent_thread = thread_current();
 
 		/* Create and initialize child_info struct */
-		child_info_ptr = malloc(sizeof(struct child_info));
+		child_info_ptr = (struct child_info *)malloc(sizeof(struct child_info));
 		if (child_info_ptr == NULL) {
 			palloc_free_page(t);
 			return TID_ERROR;
@@ -212,7 +212,7 @@ thread_create (const char *name, int priority,
 
 		/* Add child_info to parent's child list */
 		list_push_back(&thread_current()->child_processes, &child_info_ptr->elem);
-	}
+	// }
 
 	/* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
@@ -235,6 +235,8 @@ thread_create (const char *name, int priority,
 	sf->ebp = 0;
 
 	intr_set_level (old_level);
+
+	// printf("thread %d create\n", tid);
 
 	/* Add to run queue. */
 	thread_unblock (t);
@@ -319,6 +321,8 @@ void
 thread_exit (void) 
 {
 	ASSERT (!intr_context ());
+
+	// printf("thread %d exited\n", thread_current()->tid);
 
 #ifdef USERPROG
 	process_exit ();
@@ -506,6 +510,9 @@ init_thread (struct thread *t, const char *name, int priority)
 	list_init(&t->file_list);
 	t->next_fd = 2;
 	t->executable = NULL;
+
+	/* Intialize locks list */
+	list_init(&t->locks_list);
 
 	/* Initialize process hierarchy fields */
 	t->parent_thread = NULL;

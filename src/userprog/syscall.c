@@ -26,10 +26,15 @@ void validate_pointer(const void *ptr) {
 
 void load_arg(void **args, struct intr_frame *f, int arg_number) {
   for (int i = 0; i < arg_number; i++) {
-    void **arg_ptr = (void **)((char *)f->esp + (i + 1) * sizeof(void *));
-    validate_pointer(arg_ptr);
-    validate_pointer(*arg_ptr);  // validate memory the pointer points to
-    args[i] = *arg_ptr;
+    // void **arg_ptr = (void **)((char *)f->esp + (i + 1) * sizeof(void *));
+    // validate_pointer(arg_ptr);
+    // validate_pointer(*arg_ptr);  // validate memory the pointer points to
+    // args[i] = *arg_ptr;
+    void *user_stack_arg_addr = (void *)((char *)f->esp + (i + 1) * sizeof(void *));
+    validate_pointer(user_stack_arg_addr); // Validate esp + offset is readable
+
+    // Read the value from user space — this might be a pointer OR int depending on syscall
+    args[i] = *(void **)user_stack_arg_addr;
   }
 }
 
@@ -83,9 +88,9 @@ int size_file(int fd){
 
 int open(char* file_name){
   if (file_name == NULL)return -1;
-  lock_acquire(&filesys_lock); ///
+  // lock_acquire(&filesys_lock);
   struct file *file = filesys_open(file_name);
-  lock_release(&filesys_lock); ///
+  // lock_release(&filesys_lock);
   if (file == NULL) return -1 ;
   struct thread * cur = thread_current();
     
@@ -101,23 +106,24 @@ int open(char* file_name){
 bool 
 remove (const char *file){
     if (file == NULL)return -1;
-       lock_acquire(&filesys_lock);//
+      //  lock_acquire(&filesys_lock);
        bool removed = filesys_remove(file);
-       lock_release(&filesys_lock);//
+      //  lock_release(&filesys_lock);
     return removed;
 }
 
 bool
 create (const char *file, unsigned initial_size){
   if (file == NULL ) return -1;
-    lock_acquire(&filesys_lock);//
+    // lock_acquire(&filesys_lock);
     bool created =filesys_create(file,initial_size);
-    lock_release(&filesys_lock);//
+    // lock_release(&filesys_lock);
   return created;
 }
 
 int
  write (int fd, const void *buffer, unsigned size){
+  // printf("writing %s\n", buffer);
     if(buffer==NULL || size ==0) return -1;
     if(fd==1){
       unsigned max_size=500;
@@ -167,19 +173,13 @@ void exit(int status) {
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  printf ("system call!\n");
+  // printf ("system call!\n");
   int syscall_number = *(int *) f->esp;
   void *arg[3];
-  
+  // printf("system call = %d\n", syscall_number);
   /* can vary from 1 - 3*/
   int arg_number = 0;
 
-  /* For each system call load the needed args then implement the functionality
-    eg:
-    arg_number = 1;
-    load_arg(arg, f , arg_number);
-    rest of code logic
-  */
   switch (syscall_number){
     case SYS_HALT:
       shutdown_power_off();
@@ -187,15 +187,17 @@ syscall_handler (struct intr_frame *f UNUSED)
 
     case SYS_EXIT:
       arg_number = 1;
+      // printf("trying to exit\n");
       load_arg(arg, f , arg_number);
-      exit(arg[0]);
+      // printf("exiting status %d\n", (int)arg[0]);
+      exit((int)arg[0]);
       break;
 
     case SYS_EXEC:
       load_arg(arg, f, 1);
       if (arg[0] == NULL)
         exit(-1);
-      f->eax = process_execute(arg[0]);
+      f->eax = process_execute((char*)arg[0]);
       break;
 
     case SYS_WAIT:
@@ -230,19 +232,24 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
 
     case SYS_READ:
+      // printf("famous read\n");
       arg_number = 3 ;
       load_arg(arg, f ,arg_number);
+      lock_acquire(&filesys_lock);
       int file_bytes_read=read((int)arg[0],arg[1],(unsigned)arg[2]);
-      if(file_bytes_read<=0)
-          return
       f->eax=file_bytes_read;
+      lock_release(&filesys_lock);
       break;
 
     case SYS_WRITE:
-      arg_number = 3 ;
+      // printf("trying to write\n");
+      arg_number = 3;
       load_arg(arg, f ,arg_number);
+      // printf("going writing\n");
+      lock_acquire(&filesys_lock);
       int file_bytes=write((int)arg[0],arg[1],(unsigned)arg[2]);
       f->eax = file_bytes;
+      lock_release(&filesys_lock);
       break;
 
     case SYS_SEEK:
@@ -266,6 +273,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
 
     default:
+      // printf("none valid call choosed\n");
       break;
   }
   // thread_exit ();
