@@ -15,13 +15,15 @@ struct file *
 file_open (struct inode *inode) 
 {
   struct file *file = calloc (1, sizeof *file);
-  file->lock = calloc (1, sizeof *file->lock);
+  //printf(inode ==NULL?"\t\t yes\n":"\t\t no\n");
+ // printf(file ==NULL?"\t\t yes\n":"\t\t no\n");
   if (inode != NULL && file != NULL)
     {
       file->inode = inode;
       file->pos = 0;
       file->deny_write = false;
-      lock_init(file->lock);
+     
+     // printf("\tso iam here too\n");
       return file;
     }
   else
