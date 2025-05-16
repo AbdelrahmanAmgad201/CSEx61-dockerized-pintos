@@ -1,5 +1,6 @@
 #include "filesys/file.h"
 #include <debug.h>
+#include<stdio.h>
 #include "filesys/inode.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
@@ -14,13 +15,15 @@ struct file *
 file_open (struct inode *inode) 
 {
   struct file *file = calloc (1, sizeof *file);
-  file->lock = calloc (1, sizeof *file->lock);
+  //printf(inode ==NULL?"\t\t yes\n":"\t\t no\n");
+ // printf(file ==NULL?"\t\t yes\n":"\t\t no\n");
   if (inode != NULL && file != NULL)
     {
       file->inode = inode;
       file->pos = 0;
       file->deny_write = false;
-      lock_init(file->lock);
+     
+     // printf("\tso iam here too\n");
       return file;
     }
   else
@@ -66,7 +69,9 @@ file_get_inode (struct file *file)
 off_t
 file_read (struct file *file, void *buffer, off_t size) 
 {
+  
   off_t bytes_read = inode_read_at (file->inode, buffer, size, file->pos);
+  
   file->pos += bytes_read;
   return bytes_read;
 }

@@ -73,7 +73,7 @@ filesys_open (const char *name)
   if (dir != NULL)
     dir_lookup (dir, name, &inode);
   dir_close (dir);
-  
+  //printf("\n name = %s\n",name);
   return file_open (inode);
 }
 

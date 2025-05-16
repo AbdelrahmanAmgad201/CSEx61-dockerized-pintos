@@ -53,23 +53,31 @@ struct file *get_file_by_fd(int fd) {
 
   for (e = list_begin(&cur->file_list); e != list_end(&cur->file_list); e = list_next(e)) {
     struct file_elem *fdesc = list_entry(e, struct file_elem, elem);
+    
     if (fdesc->fd == fd) {
+      
       return fdesc->file;
     }
   }
+  
   return NULL;
 }
 
 int read (int fd, void *buffer, unsigned size)
 { 
   if(fd==0){
+    //printf("\n%d\n",size);
     for(int i=0;i<size ;i++){
+      // printf("\nkokok\n");
       char ch=input_getc();
+      //printf("\n%c\n",ch);
       ((char*)buffer)[i]=ch;
       if(ch=='\0')
           return i; 
     }
+    return size;
   }
+  
   struct file* file=get_file_by_fd(fd);
   if(file==NULL){
     return -1;
@@ -96,19 +104,27 @@ int size_file(int fd){
 }
 
 int open(char* file_name){
+ // printf("\topen\n");
   if (file_name == NULL)return -1;
-  // lock_acquire(&filesys_lock);
+  //lock_acquire(&filesys_lock);
+ // printf("\t startttt opening\n");
   struct file *file = filesys_open(file_name);
-  // lock_release(&filesys_lock);
-  if (file == NULL) return -1 ;
+//  printf("\t ennndd opening\n");
+  //lock_release(&filesys_lock);
+  if (file == NULL) {
+   // printf("\t file not founnd\n");
+    return -1 ;
+  }
+ // printf("\t file founnd\n");
   struct thread * cur = thread_current();
     
   struct file_elem * new_file_elem = malloc(sizeof(struct file_elem));
-  
-  new_file_elem->fd = cur->next_fd++;
+//  printf("\t thread strat\n");
+  new_file_elem->fd = ++cur->next_fd;
   new_file_elem->file = file;
+//  printf("\n\nfd = = %d\n\n ",new_file_elem->fd);
   list_push_back(&cur->file_list,&new_file_elem->elem);
-  
+//  printf("\tend open\n");
   return new_file_elem->fd;
 }
 
@@ -125,6 +141,7 @@ bool
 create (const char *file, unsigned initial_size){
   if (file == NULL ) return -1;
     // lock_acquire(&filesys_lock);
+   
     bool created =filesys_create(file,initial_size);
     // lock_release(&filesys_lock);
   return created;
@@ -132,7 +149,7 @@ create (const char *file, unsigned initial_size){
 
 int
  write (int fd, const void *buffer, unsigned size){
-  // printf("writing %s\n", buffer);
+  // printf("\t\twriting %s\n", buffer);
     if(buffer==NULL || size ==0) return -1;
     if(fd==1){
       unsigned max_size=500;
@@ -153,7 +170,10 @@ int
  void 
  close(int fd){
     struct file* file=get_file_by_fd(fd);
-    lock_acquire(&filesys_lock);
+    //lock_acquire(&filesys_lock);
+    if(file==NULL){
+      return;
+    }
     
 	  struct thread *cur = thread_current();
     struct list_elem *e;
@@ -167,7 +187,7 @@ int
         }
       }
     free(fdesc);
-    lock_release(&filesys_lock);
+    //lock_release(&filesys_lock);
    
  }
 
@@ -182,22 +202,34 @@ void exit(int status) {
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
+ 
   int *esp = f->esp;
   validate_buffer(esp, sizeof(int));
   
   int syscall_number = *esp;
+<<<<<<< HEAD
   int arg[3];
+=======
+  //printf("system call = %d\n",syscall_number);
+  void *arg[3];
+>>>>>>> c53596f8fed5fccf26f46790254ce589d0bec486
   /* can vary from 1 - 3*/
   int arg_number = 0;
 
   switch (syscall_number){
     case SYS_HALT:
+    
       shutdown_power_off();
       break;
 
     case SYS_EXIT:
       arg_number = 1;
+<<<<<<< HEAD
       validate_buffer(esp, sizeof(int));
+=======
+      
+      // printf("trying to exit\n");
+>>>>>>> c53596f8fed5fccf26f46790254ce589d0bec486
       load_arg(arg, f , arg_number);
       exit((int)arg[0]);
       break;
@@ -229,6 +261,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
 
     case SYS_OPEN:
+     // printf("\tstart open\n");
       arg_number = 1 ;
       load_arg(arg, f ,arg_number);
       validate_string(arg[0]);
