@@ -207,12 +207,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   validate_buffer(esp, sizeof(int));
   
   int syscall_number = *esp;
-<<<<<<< HEAD
   int arg[3];
-=======
-  //printf("system call = %d\n",syscall_number);
-  void *arg[3];
->>>>>>> c53596f8fed5fccf26f46790254ce589d0bec486
   /* can vary from 1 - 3*/
   int arg_number = 0;
 
@@ -224,12 +219,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 
     case SYS_EXIT:
       arg_number = 1;
-<<<<<<< HEAD
       validate_buffer(esp, sizeof(int));
-=======
-      
-      // printf("trying to exit\n");
->>>>>>> c53596f8fed5fccf26f46790254ce589d0bec486
       load_arg(arg, f , arg_number);
       exit((int)arg[0]);
       break;
