@@ -44,23 +44,31 @@ struct file *get_file_by_fd(int fd) {
 
   for (e = list_begin(&cur->file_list); e != list_end(&cur->file_list); e = list_next(e)) {
     struct file_elem *fdesc = list_entry(e, struct file_elem, elem);
+    
     if (fdesc->fd == fd) {
+      
       return fdesc->file;
     }
   }
+  
   return NULL;
 }
 
 int read (int fd, void *buffer, unsigned size)
 { 
   if(fd==0){
+    //printf("\n%d\n",size);
     for(int i=0;i<size ;i++){
+      // printf("\nkokok\n");
       char ch=input_getc();
+      //printf("\n%c\n",ch);
       ((char*)buffer)[i]=ch;
       if(ch=='\0')
           return i; 
     }
+    return size;
   }
+  
   struct file* file=get_file_by_fd(fd);
   if(file==NULL){
     return -1;
@@ -87,6 +95,7 @@ int size_file(int fd){
 }
 
 int open(char* file_name){
+  //printf("open\n");
   if (file_name == NULL)return -1;
   // lock_acquire(&filesys_lock);
   struct file *file = filesys_open(file_name);
@@ -96,10 +105,11 @@ int open(char* file_name){
     
   struct file_elem * new_file_elem = malloc(sizeof(struct file_elem));
   
-  new_file_elem->fd = cur->next_fd++;
+  new_file_elem->fd = ++cur->next_fd;
   new_file_elem->file = file;
+  printf("\n\nfd = = %d\n\n ",new_file_elem->fd);
   list_push_back(&cur->file_list,&new_file_elem->elem);
-  
+  //("end open\n");
   return new_file_elem->fd;
 }
 
@@ -116,6 +126,7 @@ bool
 create (const char *file, unsigned initial_size){
   if (file == NULL ) return -1;
     // lock_acquire(&filesys_lock);
+   
     bool created =filesys_create(file,initial_size);
     // lock_release(&filesys_lock);
   return created;
@@ -123,7 +134,7 @@ create (const char *file, unsigned initial_size){
 
 int
  write (int fd, const void *buffer, unsigned size){
-  // printf("writing %s\n", buffer);
+  // printf("\t\twriting %s\n", buffer);
     if(buffer==NULL || size ==0) return -1;
     if(fd==1){
       unsigned max_size=500;
@@ -173,20 +184,23 @@ void exit(int status) {
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  // printf ("system call!\n");
+   //printf ("\t\tsystem call!\n");
   int syscall_number = *(int *) f->esp;
   void *arg[3];
-  // printf("system call = %d\n", syscall_number);
+
+  //printf("system call = %d\n", syscall_number);
   /* can vary from 1 - 3*/
   int arg_number = 0;
 
   switch (syscall_number){
     case SYS_HALT:
+    
       shutdown_power_off();
       break;
 
     case SYS_EXIT:
       arg_number = 1;
+      
       // printf("trying to exit\n");
       load_arg(arg, f , arg_number);
       // printf("exiting status %d\n", (int)arg[0]);
@@ -218,6 +232,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
 
     case SYS_OPEN:
+     // printf("\tstart open\n");
       arg_number = 1 ;
       load_arg(arg, f ,arg_number);
       f->eax= open((char*)arg[0]);
@@ -235,6 +250,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       // printf("famous read\n");
       arg_number = 3 ;
       load_arg(arg, f ,arg_number);
+    
       lock_acquire(&filesys_lock);
       int file_bytes_read=read((int)arg[0],arg[1],(unsigned)arg[2]);
       f->eax=file_bytes_read;
@@ -242,10 +258,10 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
 
     case SYS_WRITE:
-      // printf("trying to write\n");
+      // printf("\n\ntrying to write\n");
       arg_number = 3;
       load_arg(arg, f ,arg_number);
-      // printf("going writing\n");
+      
       lock_acquire(&filesys_lock);
       int file_bytes=write((int)arg[0],arg[1],(unsigned)arg[2]);
       f->eax = file_bytes;
