@@ -24,19 +24,22 @@ void validate_pointer(const void *ptr) {
   }
 }
 
-void load_arg(void **args, struct intr_frame *f, int arg_number) {
+void load_arg(int *args, struct intr_frame *f, int arg_number) {
   int *esp = f->esp; // already validated
   for (int i = 0; i < arg_number; i++) {
-    void *user_stack_arg_addr = (void *)(esp + i + 1);
-    validate_pointer(user_stack_arg_addr); // Validate esp + offset is readable
-
-    args[i] = *(void **)user_stack_arg_addr;
+    int *ptr = (void *)(esp + i + 1);
+    /* since all pointer are 4 bytes like int and arg could be a pointer or an integer */
+    validate_buffer(ptr, sizeof(4));
+    args[i] = *ptr;
   }
 }
 
 void validate_string(char *ptr) {
-  validate_pointer(ptr);
-  while (*ptr != '\0') ptr++;
+  while (true) {
+    validate_pointer(ptr); // validate before reading
+    if (*ptr == '\0') break;
+    ptr++;
+  }
 }
 
 void validate_buffer(char *buff, unsigned int size) {
@@ -208,8 +211,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   validate_buffer(esp, sizeof(int));
   
   int syscall_number = *esp;
-  //printf("system call = %d\n",syscall_number);
-  void *arg[3];
+  int arg[3];
   /* can vary from 1 - 3*/
   int arg_number = 0;
 
@@ -221,8 +223,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 
     case SYS_EXIT:
       arg_number = 1;
-      
-      // printf("trying to exit\n");
+      validate_buffer(esp, sizeof(int));
       load_arg(arg, f , arg_number);
       exit((int)arg[0]);
       break;
@@ -234,6 +235,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
 
     case SYS_WAIT:
+      validate_buffer(esp, sizeof(int));
       load_arg(arg, f, 1);
       f->eax = process_wait((tid_t)arg[0]);
       break;
