@@ -266,7 +266,6 @@ syscall_handler (struct intr_frame *f UNUSED)
       arg_number = 1 ;
       load_arg(arg, f ,arg_number);
       int size = size_file((int)arg[0]);
-      if(size == -1)return;
       f->eax = size;
       break;
 
@@ -287,6 +286,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       validate_buffer(arg[1], arg[2]);
       lock_acquire(&filesys_lock);
       int file_bytes=write((int)arg[0],arg[1],(unsigned)arg[2]);
+      if(file_bytes == -1)exit(-1);
       f->eax = file_bytes;
       lock_release(&filesys_lock);
       break;
