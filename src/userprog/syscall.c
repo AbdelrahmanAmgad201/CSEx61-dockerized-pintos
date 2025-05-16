@@ -180,7 +180,8 @@ static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
   int *esp = f->esp;
-  validate_pointer(esp);
+  validate_buffer(esp, sizeof(int));
+  
   int syscall_number = *esp;
   void *arg[3];
   /* can vary from 1 - 3*/
