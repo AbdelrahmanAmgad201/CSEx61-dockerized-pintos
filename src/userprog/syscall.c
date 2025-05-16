@@ -60,8 +60,10 @@ struct file *get_file_by_fd(int fd) {
   return NULL;
 }
 
+
 int read (int fd, void *buffer, unsigned size)
 { 
+  if (size == 0)return 0;
   if(fd==0){
     //printf("\n%d\n",size);
     for(int i=0;i<size ;i++){
@@ -79,7 +81,8 @@ int read (int fd, void *buffer, unsigned size)
   if(file==NULL){
     return -1;
   }
-  return file_read(fd,buffer,size);
+  //printf(file->inode == NULL?"\t\t yse\n":"\t\t no\n");
+  return file_read(file,buffer,size);
 }
 
 unsigned tell (int fd){
@@ -147,7 +150,8 @@ create (const char *file, unsigned initial_size){
 int
  write (int fd, const void *buffer, unsigned size){
   // printf("\t\twriting %s\n", buffer);
-    if(buffer==NULL || size ==0) return -1;
+  //if (size== 0)return 0;
+    if(buffer==NULL ) return -1;
     if(fd==1){
       unsigned max_size=500;
       for(unsigned i = 0 ; i < size ;i+=max_size){

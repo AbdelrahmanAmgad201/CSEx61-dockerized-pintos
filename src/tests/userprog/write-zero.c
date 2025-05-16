@@ -15,6 +15,7 @@ test_main (void)
 
   buf = 123;
   byte_cnt = write (handle, &buf, 0);
+  //printf("\nhi\n");
   if (byte_cnt != 0)
     fail("write() returned %d instead of 0", byte_cnt);
 }
