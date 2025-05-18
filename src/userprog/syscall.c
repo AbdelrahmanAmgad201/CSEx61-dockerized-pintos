@@ -68,11 +68,11 @@ int read (int fd, void *buffer, unsigned size)
 { 
   if (size == 0)return 0;
   if(fd==0){
-    //printf("\n%d\n",size);
+    
     for(int i=0;i<size ;i++){
-      // printf("\nkokok\n");
+     
       char ch=input_getc();
-      //printf("\n%c\n",ch);
+      
       ((char*)buffer)[i]=ch;
       if(ch=='\0')
           return i; 
@@ -80,11 +80,10 @@ int read (int fd, void *buffer, unsigned size)
     return size;
   }
   
-  struct file* file=get_file_by_fd(fd);
+  struct file* file = get_file_by_fd(fd);
   if(file==NULL){
     return -1;
   }
-  //printf(file->inode == NULL?"\t\t yse\n":"\t\t no\n");
   return file_read(file,buffer,size);
 }
 
@@ -110,24 +109,22 @@ int open(char* file_name){
  // printf("\topen\n");
   if (file_name == NULL)return -1;
   //lock_acquire(&filesys_lock);
- // printf("\t startttt opening\n");
   struct file *file = filesys_open(file_name);
-//  printf("\t ennndd opening\n");
   //lock_release(&filesys_lock);
   if (file == NULL) {
-   // printf("\t file not founnd\n");
+ 
     return -1 ;
   }
- // printf("\t file founnd\n");
+
   struct thread * cur = thread_current();
     
   struct file_elem * new_file_elem = malloc(sizeof(struct file_elem));
-//  printf("\t thread strat\n");
+
   new_file_elem->fd = ++cur->next_fd;
   new_file_elem->file = file;
-//  printf("\n\nfd = = %d\n\n ",new_file_elem->fd);
+
   list_push_back(&cur->file_list,&new_file_elem->elem);
-//  printf("\tend open\n");
+
   return new_file_elem->fd;
 }
 
@@ -270,7 +267,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
 
     case SYS_READ:
-      // printf("famous read\n");
+      
       arg_number = 3 ;
       load_arg(arg, f ,arg_number);
       validate_buffer(arg[1], arg[2]);
